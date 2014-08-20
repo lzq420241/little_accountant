@@ -1,5 +1,7 @@
 __author__ = 'liziqiang'
 
+
+# change system time to 2014 Sep to get the UT run properly.
 import datetime
 
 __all__ = ['date_from_string', 'string_from_date', 'get_interval_days',
@@ -7,7 +9,7 @@ __all__ = ['date_from_string', 'string_from_date', 'get_interval_days',
            'get_spans', 'is_in_span', 'get_first_day_of_last_month',
            'get_last_day_of_last_month', 'get_days_of_last_month',
            'get_days_of_month', 'get_month_id', 'get_last_month_id',
-           'get_date']
+           'get_first_day_of_cur_month', 'get_date']
 hard_times_for_employer = ['3/20-3/31', '7/1/14-12/31/14']
 
 
@@ -154,6 +156,14 @@ def get_first_day_of_last_month():
     if not m:
         m = 12
         y -= 1
+    return datetime.date(y, m, d)
+
+
+def get_first_day_of_cur_month():
+    cur = datetime.date.today()
+    d = 1
+    m = cur.month
+    y = cur.year
     return datetime.date(y, m, d)
 
 

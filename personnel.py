@@ -51,21 +51,22 @@ class Personnel():
         self.aboard_month_id = get_month_id(self.aboard_date)
 
         # sometimes dismissed date are omitted, it didn't matter when the worker left,
-        # here presume that him/her dismission date as last day of that clearing month.
-        if status and not dismission_date:
-            self.dismission_date = get_last_day_of_last_month()
+        # here presume that him/her dismission date as first day of cur month.
+        # since the normal way of calculating working days for dismissed worker will have one day offset.
+        if status and (not dismission_date or get_date(dismission_date) > get_last_day_of_last_month()):
+            self.dismission_date = get_first_day_of_cur_month()
         if self.dismission_date:
             self.dismission_month_id = get_month_id(self.dismission_date)
+
+        # neither status info or dismission date is exist
+        # dismission date is beyond current calc range
+        if not status:
+            self.status = u'在职'
 
         self.worked_days = self.__days_worked_last_month()
         # when counting worker numbers, we filter aboard date in hard employment duration.
         self.is_in_a_large_bundle = is_in_a_large_bundle
 
-        # neither status info or dismission date is exist
-        # dismission date is beyond current calc range
-        if (not status and not self.dismission_date) or self.dismission_month_id > get_last_month_id():
-            status = u'在职'
-        self.status = status
         # used for sort
         self.weight = order_by_status.index(self.status)
         self.get_paid_month()
@@ -110,7 +111,7 @@ class Personnel():
             self.paid_month -= 1
 
     def __days_worked_last_month(self):
-        if self.dismission_date:
+        if self.status != u'在职':
             return get_interval_days(self.dismission_date, self.get_start_work_day())
         else:
             return get_interval_days(get_last_day_of_last_month(), self.get_start_work_day()) + 1

@@ -131,7 +131,7 @@ def get_pre_bundle_worker_ids():
         comment = cur_sheet.cell(row_idx, col_len - 1).value
         while comment:
             # search for '[^不]满30'
-            if re.match(ur'.+[^\u4e0d][\u6ee1]30.+', comment, re.UNICODE):
+            if re.match(ur'.+[^\u4e0d][\u6ee1]%s.+' % BUNDLE, comment, re.UNICODE):
                 worker_id = cur_sheet.cell(row_idx, worker_id_col_idx).value
                 worker_ids_in_bundle.add(worker_id)
             row_idx += 1
@@ -254,7 +254,7 @@ def personnel_initializer():
 def get_sheet_statistics(persons):
     assert type(persons) == list or type(persons) == tuple
     aboard_number = len(filter((lambda p: is_date_in_last_month(p.aboard_date)), persons))
-    dismiss_number = len(filter((lambda p: is_date_in_last_month(p.dismission_date)), persons))
+    dismiss_number = len(filter((lambda p: p.status != u'在职'), persons))
     calc_stat = list()
     com_list = [p.commission for p in persons]
     com_set = set(com_list)
@@ -295,8 +295,8 @@ def draw_signature():
     out_sheet.row(out_row_id + 5).height_mismatch = True
     out_sheet.row(out_row_id + 5).height = 256 * 4
     out_sheet.write_merge(out_row_id + 6, out_row_id + 6, 5, col_len - 1, corp_sign, center_no_border)
-    out_sheet.write_merge(out_row_id + 7, out_row_id + 7, 5, col_len - 1, u'%s月%s日%s年'
-                          % (now.month, now.day, now.year - 2000), center_no_border)
+    out_sheet.write_merge(out_row_id + 7, out_row_id + 7, 5, col_len - 1, u'%s年%s月%s日'
+                          % (now.year, now.month, now.day), center_no_border)
 
     out_sheet.flush_row_data()
 
