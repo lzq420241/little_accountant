@@ -1,7 +1,9 @@
 __author__ = 'liziqiang'
 
 import unittest
+
 from calculator import *
+
 
 __all__ = ['TestCalculator']
 
@@ -40,3 +42,7 @@ class TestCalculator(unittest.TestCase):
         str2 = date_from_string('6/30/14')
         expect_str = 'date1 or date2 2014/7/28 2014-06-30 type error'
         self.assertRaisesRegexp(Exception,expect_str, get_interval_days, str1, str2)
+
+    def test_date_duration_month(self):
+        str1 = '2013/7/28'
+        self.assertEqual(get_interval_months_since_now(str1), 14)

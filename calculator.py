@@ -1,7 +1,7 @@
 __author__ = 'liziqiang'
 
 import datetime
-
+from datetime import date
 
 def date_from_string(date_str):
     """
@@ -42,3 +42,20 @@ def get_interval_days(date1, date2):
                         % (date1, date2, type(date1), type(date1)))
     duration = date1 > date2 and date1 - date2 or date2 - date1
     return duration.days
+
+
+def get_interval_months_since_now(date1):
+    if type(date1) == str:
+        date1 = date_from_string(date1)
+
+    if type(date1) != datetime.date:
+        raise Exception("date1 %s type error, expect both be str or date, actual %s ." % (date1, type(date1)))
+
+    now = date.today()
+    if date1 > now:
+        raise Exception("date1 %s value error, ahead of current %s ." % (date1, now))
+
+    month1 = date1.year * 12 + date1.month
+    month2 = now.year * 12 + now.month
+
+    return month2 - month1
