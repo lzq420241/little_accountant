@@ -37,12 +37,15 @@ class TestCalculator(unittest.TestCase):
         self.assertEqual(get_interval_days(str1, str2), 28)
         self.assertEqual(get_interval_days(str2, str1), 28)
 
-    def test_date_duration_err(self):
-        str1 = '2014/7/28'
-        str2 = date_from_string('6/30/14')
-        expect_str = 'date1 or date2 2014/7/28 2014-06-30 type error'
-        self.assertRaisesRegexp(Exception,expect_str, get_interval_days, str1, str2)
-
     def test_date_duration_month(self):
         str1 = '2013/7/28'
         self.assertEqual(get_interval_months_since_now(str1), 14)
+
+    def test_get_spans(self):
+        self.assertEqual(len(get_spans()), 4)
+
+    def test_is_in_span(self):
+        self.assertTrue(is_in_span('2013/3/20'))
+        self.assertTrue(is_in_span('9/20/14'))
+        self.assertFalse(is_in_span('9/20/12'))
+        self.assertFalse(is_in_span('2015/3/20'))
