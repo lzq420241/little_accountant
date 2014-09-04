@@ -104,9 +104,10 @@ def get_interval_months_since_now(date1):
 def get_first_day_of_last_month():
     cur = datetime.date.today()
     d = 1
-    m = (cur.month + 11) % 12
+    m = cur.month - 1
     y = cur.year
-    if m == 1:
+    if not m:
+        m = 12
         y -= 1
     return datetime.date(y, m, d)
 
