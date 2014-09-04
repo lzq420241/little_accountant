@@ -3,7 +3,8 @@ __author__ = 'liziqiang'
 import datetime
 
 __all__ = ['date_from_string', 'get_interval_days', 'get_interval_months_since_now',
-           'get_spans', 'is_in_span', 'get_first_day_of_last_month']
+           'get_spans', 'is_in_span', 'get_first_day_of_last_month',
+           'get_last_day_of_last_month', 'get_days_of_last_month']
 hard_times_for_employer = ['3/20-3/31', '7/1-12/31']
 
 
@@ -97,15 +98,24 @@ def get_interval_months_since_now(date1):
 
     month1 = date1.year * 12 + date1.month
     month2 = now.year * 12 + now.month
-
     return month2 - month1
 
 
 def get_first_day_of_last_month():
     cur = datetime.date.today()
     d = 1
-    m = cur.month - 1
+    m = (cur.month + 11) % 12
     y = cur.year
-    if not m:
+    if m == 1:
         y -= 1
     return datetime.date(y, m, d)
+
+
+def get_last_day_of_last_month():
+    cur = datetime.date.today()
+    last_day_of_last_month = datetime.date(cur.year, cur.month, 1) - datetime.timedelta(days=1)
+    return last_day_of_last_month
+
+
+def get_days_of_last_month():
+    return get_last_day_of_last_month().day
