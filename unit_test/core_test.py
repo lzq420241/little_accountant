@@ -7,7 +7,7 @@ from calculator import *
 from personnel import *
 
 
-__all__ = ['TestCalculator']
+# __all__ = ['TestCalculator', 'TestPersonnel']
 
 
 class TestCalculator(unittest.TestCase):
@@ -25,6 +25,10 @@ class TestCalculator(unittest.TestCase):
         date2 = date_from_string(str2)
         self.assertTrue(date1 < date2)
 
+    def test_string_from_date(self):
+        date1 = date_from_string('6/3/15')
+        self.assertEqual(string_from_date(date1), '2015.06.03')
+
     def test_date_duration_date(self):
         str1 = '2014/7/28'
         str2 = '6/30/14'
@@ -32,6 +36,14 @@ class TestCalculator(unittest.TestCase):
         date2 = date_from_string(str2)
         self.assertEqual(get_interval_days(date1, date2), 28)
         self.assertEqual(get_interval_days(date2, date1), 28)
+
+    def test_is_date_in_last_month(self):
+        str1 = '2014/7/28'
+        str2 = '8/30/13'
+        str3 = '2014/8/1'
+        self.assertFalse(is_date_in_last_month(str1))
+        self.assertFalse(is_date_in_last_month(str2))
+        self.assertTrue(is_date_in_last_month(str3))
 
     def test_date_duration_str(self):
         str1 = '2014/7/28'
@@ -50,7 +62,7 @@ class TestCalculator(unittest.TestCase):
         self.assertEqual(get_interval_months_since_now(str1), 14)
 
     def test_get_spans(self):
-        self.assertEqual(len(get_spans()), 4)
+        self.assertEqual(len(get_spans()), 3)
 
     def test_is_in_span(self):
         self.assertTrue(is_in_span('2013/3/20'))
@@ -61,17 +73,18 @@ class TestCalculator(unittest.TestCase):
     def test_get_days_of_last_month(self):
         self.assertTrue(get_days_of_last_month() == 31)
 
+    def test_get_days_of_month(self):
+        self.assertEqual(get_days_of_month('2000/2/3'), 29)
+        self.assertEqual(get_days_of_month('2010/12/3'), 31)
+
 
 class TestPersonnel(unittest.TestCase):
     def setUp(self):
-        # name, job_id, company, aboard_date, status, dismission_date
-        name = '张三'
-        jod_id = 'LK141717'
-        company = '生产一部 强化课'
+        # aboard_date, status, dismission_date
         aboard_date = '7/20/14'
         status = ''
         dismission_date = ''
-        self.test_class = Personnel(name, jod_id, company, aboard_date, status, dismission_date)
+        self.test_class = Personnel(aboard_date, status, dismission_date)
 
     def tearDown(self):
         pass
@@ -93,7 +106,24 @@ class TestPersonnel(unittest.TestCase):
         self.test_class.update_valid_info()
         self.test_class.get_commission()
         self.assertTrue(self.test_class.valid)
-        self.assertEqual(self.test_class.commission, BONUS_COMMISSION)
+        self.assertEqual(self.test_class.commission, NORMAL_COMMISSION)
+
+    def test_over_worker_paid_month(self):
+        self.test_class.aboard_date = date_from_string('8/25/13')
+        self.test_class.update_valid_info()
+        self.test_class.get_commission()
+        self.assertFalse(self.test_class.valid)
+        self.assertEqual(self.test_class.paid_month, 13)
+
+    def test_normal_worker_paid_month(self):
+        self.test_class.aboard_date = date_from_string('8/26/13')
+        self.test_class.update_valid_info()
+        self.test_class.get_commission()
+        self.test_class.get_comment()
+        expect_comment = u'这是第12个月支付，按80元/人支付，共支付一年（入职批次不满30人）'
+        self.assertTrue(self.test_class.valid)
+        self.assertEqual(self.test_class.paid_month, 12)
+        self.assertEqual(self.test_class.comment, expect_comment)
 
     def test_normal_worker_less_than_six_month(self):
         self.test_class.aboard_date = date_from_string('5/20/14')
@@ -117,14 +147,14 @@ class TestPersonnel(unittest.TestCase):
         self.assertEqual(self.test_class.commission, 0)
 
     def test_dismiss_worker_more_than_a_month(self):
-        self.test_class.status = '试用期不合格'
+        self.test_class.status = u'试用期不合格'
         self.test_class.dismission_date = date_from_string('7/20/14')
         self.test_class.update_valid_info()
         self.test_class.get_commission()
         self.assertFalse(self.test_class.valid)
 
-    def test_dismiss_worker_more_than_a_month(self):
-        self.test_class.status = '试用期不合格'
+    def test_dismiss_worker_less_than_a_month(self):
+        self.test_class.status = u'试用期不合格'
         self.test_class.dismission_date = date_from_string('8/20/14')
         self.test_class.update_valid_info()
         self.test_class.get_commission()
@@ -132,7 +162,7 @@ class TestPersonnel(unittest.TestCase):
         self.assertEqual(self.test_class.commission, expect_value)
 
     def test_normal_worker_less_than_sixteen_day(self):
-        self.test_class.status = '试用期不合格'
+        self.test_class.status = u'试用期不合格'
         self.test_class.dismission_date = date_from_string('8/16/14')
         self.test_class.update_valid_info()
         self.test_class.get_commission()
@@ -140,7 +170,7 @@ class TestPersonnel(unittest.TestCase):
         self.assertEqual(self.test_class.commission, expect_value)
 
     def test_auto_dismiss_worker_more_than_a_month(self):
-        self.test_class.status = '自动离职'
+        self.test_class.status = u'自动离职'
         self.test_class.dismission_date = date_from_string('8/20/14')
         self.test_class.update_valid_info()
         self.test_class.get_commission()

@@ -2,10 +2,12 @@ __author__ = 'liziqiang'
 
 import datetime
 
-__all__ = ['date_from_string', 'get_interval_days', 'get_interval_months_since_now',
+__all__ = ['date_from_string', 'string_from_date', 'get_interval_days',
+           'get_interval_months_since_now', 'is_date_in_last_month',
            'get_spans', 'is_in_span', 'get_first_day_of_last_month',
-           'get_last_day_of_last_month', 'get_days_of_last_month']
-hard_times_for_employer = ['3/20-3/31', '7/1-12/31']
+           'get_last_day_of_last_month', 'get_days_of_last_month',
+           'get_days_of_month']
+hard_times_for_employer = ['3/20-3/31', '7/1/14-12/31/14']
 
 
 def get_spans():
@@ -21,10 +23,16 @@ def get_spans():
         span_for_current = []
         span_for_last = []
         for d in span.split('-'):
-            span_for_current.append(date_from_string(d + '/%s' % current_year))
-            span_for_last.append(date_from_string(d + '/%s' % last_year))
+            if d.count('/') == 1:
+                span_for_current.append(date_from_string(d + '/%s' % current_year))
+                span_for_last.append(date_from_string(d + '/%s' % last_year))
+            elif d.count('/') == 2:
+                span_for_current.append(date_from_string(d))
+            else:
+                raise Exception("date_str %s format error." % d)
         spans.append(span_for_current)
-        spans.append(span_for_last)
+        if span_for_last:
+            spans.append(span_for_last)
 
     return spans
 
@@ -34,11 +42,11 @@ def is_in_span(date):
     date = _get_date(date)
     for s in spans:
         assert (type(s) == list)
-        assert (len(s) == 2)
-        start = s[0]
+        assert (len(s) >= 2)
+        begin = s[0]
         end = s[1]
-        if start <= date <= end:
-            return True
+        if begin <= date <= end:
+            return True, [string_from_date(begin), string_from_date(end)]
     return False
 
 
@@ -82,6 +90,36 @@ def date_from_string(date_str):
     return get_date()
 
 
+def is_date_in_last_month(date_str):
+    assert (type(date_str) == str)
+    cur = datetime.date.today()
+
+    date_list = date_str.split('/')
+    first_part = int(date_list[0])
+    second_part = int(date_list[1])
+    third_part = int(date_list[2])
+    if first_part > 99:
+        year = first_part
+        month = second_part
+    else:
+        month = first_part
+        year = third_part + 2000
+    if cur.month == 1:
+        return month == 12 and year == cur.year - 1
+    else:
+        return month == cur.month - 1 and year == cur.year
+
+
+def string_from_date(date_obj):
+    """
+    This Class create a string from a date object.
+    string format will be:
+    YYYY.MM.DD
+    """
+    assert (type(date_obj) == datetime.date)
+    return date_obj.strftime("%Y.%m.%d")
+
+
 def get_interval_days(date1, date2):
     date1 = _get_date(date1)
     date2 = _get_date(date2)
@@ -98,6 +136,7 @@ def get_interval_months_since_now(date1):
 
     month1 = date1.year * 12 + date1.month
     month2 = now.year * 12 + now.month
+
     return month2 - month1
 
 
@@ -120,3 +159,15 @@ def get_last_day_of_last_month():
 
 def get_days_of_last_month():
     return get_last_day_of_last_month().day
+
+
+def get_days_of_month(para):
+    cur_date = _get_date(para)
+    if cur_date.month == 12:
+        next_month = 1
+        next_year = cur_date.year + 1
+    else:
+        next_month = cur_date.month + 1
+        next_year = cur_date.year
+    last_day_of_cur_month = datetime.date(next_year, next_month, 1) - datetime.timedelta(days=1)
+    return last_day_of_cur_month.day
