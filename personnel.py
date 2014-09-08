@@ -6,52 +6,74 @@ NORMAL_COMMISSION = 80
 BONUS_COMMISSION = 100
 SPECIAL_COMMISSION = 200
 LEAST_DAYS_FOR_NOR_COMMISSION = 7
+LEAST_DAYS_FOR_SPEC_COMMISSION = 7
 LEAST_DAYS_FOR_DISMISS_COMMISSION = 16
 
-__all__ = ['Personnel', 'NORMAL_COMMISSION', 'BONUS_COMMISSION', 'SPECIAL_COMMISSION']
+__all__ = ['Personnel', 'NORMAL_COMMISSION', 'BONUS_COMMISSION', 'SPECIAL_COMMISSION',
+           'LEAST_DAYS_FOR_NOR_COMMISSION', 'LEAST_DAYS_FOR_DISMISS_COMMISSION',
+           'LEAST_DAYS_FOR_SPEC_COMMISSION']
 
 
 class Personnel():
-    def __init__(self, aboard_date, status, dismission_date):
+    def __init__(self, sequence, aboard_date, status, dismission_date,
+                 is_in_a_large_bundle=False, bundle_inited=True):
         self.valid = True
-        self.aboard_date = date_from_string(aboard_date)
-        self.status = status and status or u'在职'
+        self.sequence = sequence
+        self.aboard_date = get_date(aboard_date)
+        self.status = None
         self.dismission_date = None
         if dismission_date:
-            assert self.status != u'在职'
-            self.dismission_date = date_from_string(dismission_date)
+            self.dismission_date = get_date(dismission_date)
         self.commission = 0
         self.base_commission = 0
         self.comment = ""
         self.period = list()
         self.paid_month = 0
-        self.is_in_a_large_bundle = False
-        # todo: remove comments below after release
-        # self.update_valid_info()
-        #self.get_commission()
+        # aid for monthly statistics
+        self.aboard_month_id = self.dismission_month_id = 0
 
-    def set_bundle_flag(self):
-        self.is_in_a_large_bundle = True
+        self.care_bundle = True
+        self.is_in_a_large_bundle = is_in_a_large_bundle
+
+        self.update_valid_info()
+        if self.valid and bundle_inited:
+            if not status and not self.dismission_date:
+                status = u'在职'
+                self.status = status
+
+            self.get_commission()
+            self.get_comment()
 
     def update_valid_info(self):
-        self.get_paid_month()
 
+        self.get_paid_month()
         month_since_dismission = 0
         if self.dismission_date:
             month_since_dismission = get_interval_months_since_now(self.dismission_date)
-        if self.paid_month > 12 or (month_since_dismission and month_since_dismission != 1):
+        if self.paid_month > 12 or (month_since_dismission and month_since_dismission > 1):
             self.valid = False
 
-    def get_commission(self):
         if self.valid:
-            if self.dismission_date and self.status != u'自动离职':
-                self.get_commission_for_dismission()
-            elif not self.dismission_date and self.__days_worked_last_month() >= LEAST_DAYS_FOR_NOR_COMMISSION:
-                self.get_base_commission()
-                self.commission = self.base_commission
+            # clear dismission date that will be calculate in next month
+            if not month_since_dismission:
+                self.dismission_date = None
+            self.aboard_month_id = get_month_id(self.aboard_date)
+            if self.dismission_date:
+                self.dismission_month_id = get_month_id(self.dismission_date)
+            if is_in_span(self.aboard_date)[0]:
+                self.care_bundle = False
+
+    def get_commission(self):
+        if self.dismission_date and self.status != u'自动离职':
+            self.get_commission_for_dismission()
+        elif not self.dismission_date and self.__days_worked_last_month() >= LEAST_DAYS_FOR_NOR_COMMISSION:
+            self.get_base_commission()
+            self.commission = self.base_commission
 
     def get_base_commission(self):
-        if is_in_span(self.aboard_date) or self.is_in_a_large_bundle:
+        if is_in_span(self.aboard_date)[0]:
+            self.base_commission = BONUS_COMMISSION
+        elif self.is_in_a_large_bundle:
             self.base_commission = BONUS_COMMISSION
         else:
             self.base_commission = NORMAL_COMMISSION
@@ -61,9 +83,9 @@ class Personnel():
             self.get_base_commission()
         worked_days = self.__days_worked_last_month()
 
-        if self.dismission_date.month == self.aboard_date.month and worked_days >= LEAST_DAYS_FOR_NOR_COMMISSION:
+        if self.dismission_month_id == self.aboard_month_id and worked_days >= LEAST_DAYS_FOR_NOR_COMMISSION:
             self.commission = SPECIAL_COMMISSION
-        elif self.dismission_date.month != self.aboard_date.month and worked_days >= LEAST_DAYS_FOR_DISMISS_COMMISSION:
+        elif self.dismission_month_id != self.aboard_month_id and worked_days >= LEAST_DAYS_FOR_DISMISS_COMMISSION:
             commission = self.base_commission * 1.0 * worked_days / get_days_of_last_month()
             self.commission = round(commission, 2)
 
@@ -86,13 +108,12 @@ class Personnel():
             return get_interval_days(get_last_day_of_last_month(), self.get_start_work_day()) + 1
 
     def get_comment(self):
-        if self.valid:
-            if self.status == u'在职':
-                self.comment = self.get_comment_for_on_work()
-            elif self.status != u'自动离职':
-                self.comment = self.get_comment_for_dismission()
-            else:
-                self.comment = u'非正常离职不计算提成'
+        if self.status == u'在职':
+            self.comment = self.get_comment_for_on_work()
+        elif self.status != u'自动离职':
+            self.comment = self.get_comment_for_dismission()
+        else:
+            self.comment = u'非正常离职不计算提成'
 
     def get_comment_for_on_work(self):
         # todo: better get comment from basic info other than commission
@@ -114,15 +135,19 @@ class Personnel():
 
     def get_comment_for_dismission(self):
         if self.commission == SPECIAL_COMMISSION:
-            desc = u'（员工入职月离职，正常办理离职手续，且离职月工作满%s天，一次性支付%s元/人）' \
-                   % (LEAST_DAYS_FOR_DISMISS_COMMISSION, SPECIAL_COMMISSION)
+            desc = u'员工入职月离职，正常办理离职手续，且离职月工作满%s天，一次性支付%s元/人' \
+                   % (LEAST_DAYS_FOR_SPEC_COMMISSION, SPECIAL_COMMISSION)
         elif self.commission > 0:
-            desc = u'（员工非入职月离职，正常办理离职手续，且离职月工作满%s天，按实际在职天数计算提成）' \
+            desc = u'员工非入职月离职，正常办理离职手续，且离职月工作满%s天，按实际在职天数计算提成' \
                    % LEAST_DAYS_FOR_DISMISS_COMMISSION
-        elif self.dismission_date.month == self.aboard_date.month:
-            desc = u'（员工入职月离职，正常办理离职手续，且离职月工作不满%s天，不计算提成）' \
-                   % LEAST_DAYS_FOR_DISMISS_COMMISSION
+        elif self.dismission_month_id == self.aboard_month_id:
+            desc = u'员工入职月离职，正常办理离职手续，且离职月工作不满%s天，不计算提成' \
+                   % LEAST_DAYS_FOR_SPEC_COMMISSION
         else:
-            desc = u'（员工非入职月离职，正常办理离职手续，且离职月工作不满%s天，不计算提成）' \
+            desc = u'员工非入职月离职，正常办理离职手续，且离职月工作不满%s天，不计算提成' \
                    % LEAST_DAYS_FOR_DISMISS_COMMISSION
         return desc
+
+    def __str__(self):
+        print self.commission, self.comment
+        return '\n'
