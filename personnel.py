@@ -11,57 +11,57 @@ LEAST_DAYS_FOR_DISMISS_COMMISSION = 16
 
 __all__ = ['Personnel', 'NORMAL_COMMISSION', 'BONUS_COMMISSION', 'SPECIAL_COMMISSION',
            'LEAST_DAYS_FOR_NOR_COMMISSION', 'LEAST_DAYS_FOR_DISMISS_COMMISSION',
-           'LEAST_DAYS_FOR_SPEC_COMMISSION']
+           'LEAST_DAYS_FOR_SPEC_COMMISSION', 'is_record_valid']
+
+
+def is_record_valid(aboard_date, dismission_date):
+    paid_month = get_paid_month(aboard_date)
+    month_since_dismission = get_interval_months_since_now(dismission_date)
+    if paid_month > 12 or month_since_dismission > 1:
+        return False
+    return True
+
+
+def get_paid_month(aboard_date):
+    aboard_date = get_date(aboard_date)
+    assert aboard_date
+    paid_month = get_interval_months_since_now(aboard_date)
+    days_worked_in_aboard_month = get_days_of_month(aboard_date) - aboard_date.day + 1
+    if days_worked_in_aboard_month < LEAST_DAYS_FOR_NOR_COMMISSION:
+        paid_month -= 1
+    return paid_month
 
 
 class Personnel():
     def __init__(self, sequence, aboard_date, status, dismission_date,
-                 is_in_a_large_bundle=False, bundle_inited=True):
-        self.valid = True
+                 is_in_a_large_bundle=False):
+
+        # for the convenience of locate cell row id of the input xls file
         self.sequence = sequence
+
         self.aboard_date = get_date(aboard_date)
-        self.status = None
-        self.dismission_date = None
-        if dismission_date:
-            self.dismission_date = get_date(dismission_date)
+        self.status = status
+
+        self.dismission_date = get_date(dismission_date)
         self.commission = 0
         self.base_commission = 0
         self.comment = ""
         self.period = list()
         self.paid_month = 0
-        # aid for monthly statistics
-        self.aboard_month_id = self.dismission_month_id = 0
+        # aid for monthly statistics, comment generation, commission calculation
+        self.aboard_month_id = get_month_id(self.aboard_date)
+        if self.dismission_date:
+            self.dismission_month_id = get_month_id(self.dismission_date)
 
         self.care_bundle = True
         self.is_in_a_large_bundle = is_in_a_large_bundle
 
-        self.update_valid_info()
-        if self.valid and bundle_inited:
-            if not status and not self.dismission_date:
-                status = u'在职'
-                self.status = status
-
-            self.get_commission()
-            self.get_comment()
-
-    def update_valid_info(self):
-
+        if not status and not self.dismission_date:
+            status = u'在职'
+        self.status = status
         self.get_paid_month()
-        month_since_dismission = 0
-        if self.dismission_date:
-            month_since_dismission = get_interval_months_since_now(self.dismission_date)
-        if self.paid_month > 12 or (month_since_dismission and month_since_dismission > 1):
-            self.valid = False
-
-        if self.valid:
-            # clear dismission date that will be calculate in next month
-            if not month_since_dismission:
-                self.dismission_date = None
-            self.aboard_month_id = get_month_id(self.aboard_date)
-            if self.dismission_date:
-                self.dismission_month_id = get_month_id(self.dismission_date)
-            if is_in_span(self.aboard_date)[0]:
-                self.care_bundle = False
+        self.get_commission()
+        self.get_comment()
 
     def get_commission(self):
         if self.dismission_date and self.status != u'自动离职':
@@ -99,8 +99,6 @@ class Personnel():
         if days_worked_in_aboard_month < LEAST_DAYS_FOR_NOR_COMMISSION:
             self.paid_month -= 1
 
-    # being called under condition that personnel.valid is True
-    # no need to consider situation that self.dismission_date.month is same with current month
     def __days_worked_last_month(self):
         if self.dismission_date:
             return get_interval_days(self.dismission_date, self.get_start_work_day())

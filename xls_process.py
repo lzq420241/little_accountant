@@ -1,7 +1,7 @@
 # coding=gb2312
 
 __author__ = 'ziqli'
-# todo: 1. sequence_number start from 3 instead of 1
+# todo: 1. sort 'contract status' normal before dismiss, care for sequence
 # todo: 2. in_bundle info should refer previous month data
 # todo: 3. add three rows to each sheet
 # todo: 4. add a summary sheet
@@ -13,7 +13,7 @@ from xlrd import *
 from xlwt import *
 
 from personnel import *
-from calculator import get_first_day_of_last_month, is_date_in_last_month
+from calculator import get_first_day_of_last_month, is_date_in_last_month, is_in_span, get_date
 
 
 in_title_list = [u'序号', u'姓名', u'工号', u'入职日期', u'离职日期']
@@ -21,6 +21,7 @@ out_title_list = [u'序号', u'姓名', u'工号', u'工作单位', u'入职日期', u'合同状�
 date_title_list = [u'入职日期', u'离职日期']
 key_col_name = u'第三方'
 xls_to_be_processed = u'联胜7月外包费用核对-承天（8-14）.xls'
+reference_xls = u'2014年7月联胜（承天）第三方提成8-21.xls'
 current_company = u'联胜'
 col_len = len(out_title_list)
 BUNDLE = 30
@@ -75,6 +76,11 @@ sheet_name_from_value = {}
 personnel_from_value = {}
 # key:category value:list [<int>aboard_num, <int>dismiss_num, <str>calc_desc]
 sheet_statistics = {}
+# worker_ids need to be retained
+valid_worker_ids = set()
+# worker_ids in bundle
+worker_ids_in_bundle = set()
+
 
 cur_dir = os.path.dirname(__file__)
 wb = open_workbook(os.path.join(cur_dir, xls_to_be_processed))
@@ -84,7 +90,58 @@ out_wb = Workbook(encoding='utf-16le')
 
 sheet = wb.sheet_by_index(0)
 cols = sheet.ncols
-rows = sheet.nrows
+# do not calc last stat line
+rows = sheet.nrows - 1
+max_width_of_comment = 0
+
+
+# this func get all worker_ids that are in a bundle
+# from clearing xls of previous month
+# (more than 30 were hire during a month)
+def get_pre_bundle_worker_ids():
+    global worker_ids_in_bundle
+    ref_wb = open_workbook(os.path.join(cur_dir, reference_xls))
+    for sheet_index in range(ref_wb.nsheets):
+        cur_sheet = ref_wb.sheet_by_index(sheet_index)
+        row_idx = 3
+        if cur_sheet.ncols < col_len:
+            continue
+        comment = cur_sheet.cell(row_idx, col_len - 1).value
+        while comment:
+            # search for '入职满'
+            if re.match(ur'.+[\u5165][\u804c][\u6ee1].+', comment, re.UNICODE):
+                worker_id = cur_sheet.cell(row_idx, worker_id_col_idx).value
+                worker_ids_in_bundle.add(worker_id)
+            row_idx += 1
+            comment = cur_sheet.cell(row_idx, col_len - 1).value
+
+
+# this func get all worker_ids that are valid
+# from upstream xls
+# (already paid for 12 month or for the dismission
+def get_valid_worker_ids():
+    for row in range(1, rows):
+        aboard_date = get_date(sheet.cell(row, aboard_col_idx).value)
+        dismission_date = get_date(sheet.cell(row, dismission_col_idx).value)
+        if is_record_valid(aboard_date, dismission_date):
+            valid_worker_id = sheet.cell(row, worker_id_col_idx).value
+            valid_worker_ids.add(valid_worker_id)
+
+
+# this func add worker_ids in bundle to worker_ids_in_bundle for new comer
+# from upstream xls
+def add_worker_ids_for_new_comer():
+    global worker_ids_in_bundle
+    for category in get_sheet_name_dict_from_column(key_col_name).keys():
+        tmp_set = set()
+        for row in range(1, rows):
+            if sheet.cell(row, key_column_index).value == category:
+                aboard_date = sheet.cell(row, aboard_col_idx).value
+                if is_date_in_last_month(aboard_date) and not is_in_span(aboard_date):
+                    worker_id = sheet.cell(row, worker_id_col_idx).value
+                    tmp_set.add(worker_id)
+        if len(tmp_set) >= BUNDLE:
+            worker_ids_in_bundle += tmp_set
 
 
 def get_tittle_row():
@@ -115,6 +172,7 @@ def get_column_ids_by_names(title_list):
 
 def get_sheet_name_dict_from_column(title):
     idx = get_column_idx_by_title(title)
+    #search for '来源（第三方）'
     valid_style = re.compile(ur'(\w+)\W*[\uff08]\W*(\w+)\W*[\uff09]', re.UNICODE)
     for row in range(1, rows):
         content = sheet.row_values(row, idx, idx + 1)[0]
@@ -132,6 +190,7 @@ def get_sheet_name_dict_from_column(title):
 
 def get_table_title(sht_name):
     # todo: what if len of current_company is more than 2
+    # search for '来源-联胜第三方'
     valid_style = re.compile(ur'\w+[\u002d](\w\w)(\w+)', re.UNICODE)
     matched_content = valid_style.match(sht_name)
     table_title = u"%s提成（%s）" % (matched_content.group(1), matched_content.group(2))
@@ -141,33 +200,33 @@ def get_table_title(sht_name):
 date_tittle_idx = get_column_ids_by_names(date_title_list)
 key_column_index = get_column_idx_by_title(key_col_name)
 sequence_col_idx = get_column_idx_by_title(u'序号')
+worker_id_col_idx = get_column_idx_by_title(u'工号')
 aboard_col_idx = get_column_idx_by_title(u'入职日期')
 dismission_col_idx = get_column_idx_by_title(u'离职日期')
 status_col_idx = get_column_idx_by_title(u'离职方式')
 
 
 def personnel_initializer():
+    global worker_ids_in_bundle
+    get_pre_bundle_worker_ids()
+    add_worker_ids_for_new_comer()
+    get_valid_worker_ids()
+    # print worker_ids_in_bundle
+    worker_ids_in_bundle &= valid_worker_ids
     for category in get_sheet_name_dict_from_column(key_col_name).keys():
-        preliminary_personnel_list = list()
+        personnel_list = list()
         for row in range(1, rows):
             if sheet.cell(row, key_column_index).value == category:
                 sequence = sheet.cell(row, sequence_col_idx).value
+                worker_id = sheet.cell(row, worker_id_col_idx).value
                 aboard_date = sheet.cell(row, aboard_col_idx).value
                 status = sheet.cell(row, status_col_idx).value
                 dismission_date = sheet.cell(row, dismission_col_idx).value
-                person = Personnel(sequence, aboard_date, status, dismission_date, False, False)
-                if person.valid:
-                    preliminary_personnel_list.append(person)
-
-        personnel_list = list()
-        bundle_list = update_bundle_info(preliminary_personnel_list)
-        # todo: not elegant, re-design after learning Design Pattern.
-        for p in preliminary_personnel_list:
-            if p in bundle_list:
-                person = Personnel(p.sequence, p.aboard_date, p.status, p.dismission_date, True)
-            else:
-                person = Personnel(p.sequence, p.aboard_date, p.status, p.dismission_date, False)
-            personnel_list.append(person)
+                is_in_bundle = worker_id in worker_ids_in_bundle
+                is_valid = worker_id in valid_worker_ids
+                if is_valid:
+                    person = Personnel(sequence, aboard_date, status, dismission_date, is_in_bundle)
+                    personnel_list.append(person)
 
         sheet_statistics[category] = get_sheet_statistics(personnel_list)
         # print sheet_statistics[category]
@@ -233,10 +292,13 @@ def get_inserted_column_dict():
 
 
 def draw_inserted_column_dict():
+    global max_width_of_comment
     inserted_cols = get_inserted_column_dict()
     if title == u'备注':
-        width = len(inserted_cols[title]) * 12 / 7 + 1
-        out_sheet.col(out_column_id).width = width * 256
+        width = len(inserted_cols[title]) * 11 / 7
+        if width > max_width_of_comment:
+            max_width_of_comment = width
+        out_sheet.col(out_column_id).width = max_width_of_comment * 256
     out_sheet.row(out_row_id).write(out_column_id, inserted_cols[title], style=common_style)
 
 
@@ -263,10 +325,10 @@ for category in get_sheet_name_dict_from_column(key_col_name).keys():
                 if col in date_tittle_idx:
                     # YYYY/MM/DD contains 11 num_chars,
                     # good estimate 12*256 as the unit is 1/256 width of the char '0'
-                    out_sheet.col(out_column_id).width = 12 *256
+                    out_sheet.col(out_column_id).width = 12 * 256
                     out_sheet.row(out_row_id).write(out_column_id, sheet.cell(row, col).value, style=date_style)
                 elif col == get_column_idx_by_title(u'序号'):
-                    out_sheet.row(out_row_id).write(out_column_id, out_row_id, style=common_style)
+                    out_sheet.row(out_row_id).write(out_column_id, out_row_id + 1 - out_row_offset, style=common_style)
                 else:
                     out_sheet.row(out_row_id).write(out_column_id, sheet.cell(row, col).value, style=common_style)
             else:
@@ -279,5 +341,4 @@ for category in get_sheet_name_dict_from_column(key_col_name).keys():
     draw_last_row(out_row_id + 1, commission_sum)
     draw_ending_rows()
 
-
-out_wb.save('output.xls')
+out_wb.save('output1.xls')

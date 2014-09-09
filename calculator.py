@@ -60,6 +60,7 @@ def is_in_span(date):
 
 def get_month_id(para):
     tmp = get_date(para)
+    assert tmp
     return tmp.year * 12 + tmp.month
 
 
@@ -68,14 +69,16 @@ def get_last_month_id():
     return get_month_id(today) - 1
 
 
+# if para is False, return None
 def get_date(para):
+    if not para or type(para) == datetime.date:
+        return para
     if type(para) == str:
         return date_from_string(para)
     if type(para) == float:
         return get_date_from_xldate(para)
-    if type(para) != datetime.date:
+    else:
         raise Exception("para %s type error, expect both be str or date, actual %s ." % (para, type(para)))
-    return para
 
 
 def date_from_string(date_str):
@@ -135,16 +138,12 @@ def get_interval_days(date1, date2):
 
 
 def get_interval_months_since_now(date1):
-    date1 = get_date(date1)
-
+    if not date1:
+        return 0
     now = datetime.date.today()
-    if date1 > now:
-        raise Exception("date1 %s value error, ahead of current %s ." % (date1, now))
-
-    month1 = date1.year * 12 + date1.month
-    month2 = now.year * 12 + now.month
-
-    return month2 - month1
+    interval = get_month_id(now) - get_month_id(date1)
+    assert interval >= 0
+    return interval
 
 
 def get_first_day_of_last_month():
