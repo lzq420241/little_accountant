@@ -74,6 +74,8 @@ date_style.font = font
 sheet_name_from_value = {}
 # key:category value:personnel list
 personnel_from_value = {}
+# key:category value:sequence list
+sequence_from_value = {}
 # key:category value:list [<int>aboard_num, <int>dismiss_num, <str>calc_desc]
 sheet_statistics = {}
 # worker_ids need to be retained
@@ -215,6 +217,7 @@ def personnel_initializer():
     worker_ids_in_bundle &= valid_worker_ids
     for category in get_sheet_name_dict_from_column(key_col_name).keys():
         personnel_list = list()
+        sequence_list = list()
         for row in range(1, rows):
             if sheet.cell(row, key_column_index).value == category:
                 sequence = sheet.cell(row, sequence_col_idx).value
@@ -226,11 +229,13 @@ def personnel_initializer():
                 is_valid = worker_id in valid_worker_ids
                 if is_valid:
                     person = Personnel(sequence, aboard_date, status, dismission_date, is_in_bundle)
+                    sequence_list.append(int(sequence))
                     personnel_list.append(person)
 
         sheet_statistics[category] = get_sheet_statistics(personnel_list)
         # print sheet_statistics[category]
         personnel_from_value[category] = personnel_list
+        sequence_from_value[category] = sequence_list
 
 
 def get_sheet_statistics(persons):
@@ -312,13 +317,15 @@ for category in get_sheet_name_dict_from_column(key_col_name).keys():
         out_sheet.row(2).write(idx, title, style=common_style)
 
     out_row_id = 2
-    for row in [int(p.sequence) for p in personnel_from_value[category]]:
+    out_row_offset = 3
+
+    # for row in [int(p.sequence) for p in personnel_from_value[category]]:
+    for raw_row_id, row in enumerate(sequence_from_value[category]):
         out_column_id = 0
 
         # offset between row id and corresponding content index
         # in personnel_from_value[category]
-        out_row_offset = 3
-        out_row_id += 1
+        out_row_id = raw_row_id + out_row_offset
         for title in out_title_list:
             if title in in_title_list:
                 col = get_column_idx_by_title(title)
@@ -328,11 +335,13 @@ for category in get_sheet_name_dict_from_column(key_col_name).keys():
                     out_sheet.col(out_column_id).width = 12 * 256
                     out_sheet.row(out_row_id).write(out_column_id, sheet.cell(row, col).value, style=date_style)
                 elif col == get_column_idx_by_title(u'ÐòºÅ'):
-                    out_sheet.row(out_row_id).write(out_column_id, out_row_id + 1 - out_row_offset, style=common_style)
+                    # out_sheet.row(out_row_id).write(out_column_id, out_row_id + 1 - out_row_offset, style=common_style)
+                    out_sheet.row(out_row_id).write(out_column_id, raw_row_id + 1, style=common_style)
                 else:
                     out_sheet.row(out_row_id).write(out_column_id, sheet.cell(row, col).value, style=common_style)
             else:
-                person = personnel_from_value[category][out_row_id - out_row_offset]
+                # person = personnel_from_value[category][out_row_id - out_row_offset]
+                person = personnel_from_value[category][raw_row_id]
                 draw_inserted_column_dict()
             out_column_id += 1
         out_sheet.flush_row_data()
