@@ -112,7 +112,7 @@ class TestPersonnel(unittest.TestCase):
 
     def test_normal_worker_paid_month(self):
         self.test_class = Personnel('8/26/13', '', '')
-        expect_comment = u'这是第12个月支付，按80元/人支付，共支付一年（入职批次不满30人）'
+        expect_comment = u'这是第12个月支付，按80.0元/人支付，共支付一年（入职批次不满30人）'
         self.assertEqual(self.test_class.paid_month, 12)
         self.assertEqual(self.test_class.comment, expect_comment)
 
