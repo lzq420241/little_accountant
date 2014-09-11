@@ -11,7 +11,6 @@ from personnel import *
 
 
 class TestCalculator(unittest.TestCase):
-
     def setUp(self):
         pass
 
@@ -101,50 +100,33 @@ class TestPersonnel(unittest.TestCase):
         pass
 
     def test_normal_worker_more_than_a_month(self):
-        self.test_class.update_valid_info()
-        self.test_class.get_commission()
-        self.assertTrue(self.test_class.valid)
         self.assertEqual(self.test_class.commission, BONUS_COMMISSION)
-
-    def test_normal_worker_more_than_twelve_month(self):
-        self.test_class = Personnel('3/20/13', '', '')
-        self.assertFalse(self.test_class.valid)
 
     def test_normal_worker_less_than_twelve_month(self):
         self.test_class = Personnel('10/20/13', '', '')
-        self.assertTrue(self.test_class.valid)
         self.assertEqual(self.test_class.commission, NORMAL_COMMISSION)
 
     def test_over_worker_paid_month(self):
         self.test_class = Personnel('8/25/13', '', '')
-        self.assertFalse(self.test_class.valid)
         self.assertEqual(self.test_class.paid_month, 13)
 
     def test_normal_worker_paid_month(self):
         self.test_class = Personnel('8/26/13', '', '')
         expect_comment = u'这是第12个月支付，按80元/人支付，共支付一年（入职批次不满30人）'
-        self.assertTrue(self.test_class.valid)
         self.assertEqual(self.test_class.paid_month, 12)
         self.assertEqual(self.test_class.comment, expect_comment)
 
     def test_normal_worker_less_than_six_month(self):
         self.test_class = Personnel('5/20/14', '', '')
-        self.assertTrue(self.test_class.valid)
         self.assertEqual(self.test_class.commission, NORMAL_COMMISSION)
 
     def test_normal_worker_less_than_a_month(self):
         self.test_class = Personnel('8/25/14', '', '')
-        self.assertTrue(self.test_class.valid)
         self.assertEqual(self.test_class.commission, BONUS_COMMISSION)
 
     def test_normal_worker_less_than_seven_day(self):
         self.test_class = Personnel('8/26/14', '', '')
-        self.assertTrue(self.test_class.valid)
         self.assertEqual(self.test_class.commission, 0)
-
-    def test_dismiss_worker_more_than_a_month(self):
-        self.test_class = Personnel('8/26/13', u'试用期不合格', '7/20/14')
-        self.assertFalse(self.test_class.valid)
 
     def test_dismiss_worker_less_than_a_month(self):
         self.test_class = Personnel('8/26/13', u'试用期不合格', '8/20/14')

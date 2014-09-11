@@ -2,12 +2,14 @@
 __author__ = 'liziqiang'
 from calculator import *
 
-NORMAL_COMMISSION = 80
-BONUS_COMMISSION = 100
-SPECIAL_COMMISSION = 200
+NORMAL_COMMISSION = 80.00
+BONUS_COMMISSION = 100.00
+SPECIAL_COMMISSION = 200.00
 LEAST_DAYS_FOR_NOR_COMMISSION = 7
 LEAST_DAYS_FOR_SPEC_COMMISSION = 7
 LEAST_DAYS_FOR_DISMISS_COMMISSION = 16
+
+order_by_status = [u'在职', u'试用期不合格', u'退回派遣公司', u'正常离职', u'自动离职']
 
 __all__ = ['Personnel', 'NORMAL_COMMISSION', 'BONUS_COMMISSION', 'SPECIAL_COMMISSION',
            'LEAST_DAYS_FOR_NOR_COMMISSION', 'LEAST_DAYS_FOR_DISMISS_COMMISSION',
@@ -33,11 +35,8 @@ def get_paid_month(aboard_date):
 
 
 class Personnel():
-    def __init__(self, sequence, aboard_date, status, dismission_date,
+    def __init__(self, aboard_date, status, dismission_date,
                  is_in_a_large_bundle=False):
-
-        # for the convenience of locate cell row id of the input xls file
-        self.sequence = sequence
 
         self.aboard_date = get_date(aboard_date)
         self.status = status
@@ -50,24 +49,34 @@ class Personnel():
         self.paid_month = 0
         # aid for monthly statistics, comment generation, commission calculation
         self.aboard_month_id = get_month_id(self.aboard_date)
+
+        # sometimes dismissed date are omitted, it didn't matter when the worker left,
+        # here presume that him/her dismission date as last day of that clearing month.
+        if status and not dismission_date:
+            self.dismission_date = get_last_day_of_last_month()
         if self.dismission_date:
             self.dismission_month_id = get_month_id(self.dismission_date)
-
-        self.care_bundle = True
+        # when counting worker numbers, we filter aboard date in hard employment duration.
         self.is_in_a_large_bundle = is_in_a_large_bundle
 
-        if not status and not self.dismission_date:
+        # neither status info or dismission date is exist
+        # dismission date is beyond current calc range
+        if (not status and not self.dismission_date) or self.dismission_month_id > get_last_month_id():
             status = u'在职'
         self.status = status
+        # used for sort
+        self.weight = order_by_status.index(self.status)
         self.get_paid_month()
+        self.get_base_commission()
         self.get_commission()
         self.get_comment()
 
+    # sometimes dismission date contains a value that will not used by current calc
+    # better to use status info to get calc correctly
     def get_commission(self):
-        if self.dismission_date and self.status != u'自动离职':
+        if self.status != u'在职' and self.status != u'自动离职':
             self.get_commission_for_dismission()
-        elif not self.dismission_date and self.__days_worked_last_month() >= LEAST_DAYS_FOR_NOR_COMMISSION:
-            self.get_base_commission()
+        elif self.status == u'在职' and self.__days_worked_last_month() >= LEAST_DAYS_FOR_NOR_COMMISSION:
             self.commission = self.base_commission
 
     def get_base_commission(self):
@@ -79,10 +88,7 @@ class Personnel():
             self.base_commission = NORMAL_COMMISSION
 
     def get_commission_for_dismission(self):
-        if not self.base_commission:
-            self.get_base_commission()
         worked_days = self.__days_worked_last_month()
-
         if self.dismission_month_id == self.aboard_month_id and worked_days >= LEAST_DAYS_FOR_NOR_COMMISSION:
             self.commission = SPECIAL_COMMISSION
         elif self.dismission_month_id != self.aboard_month_id and worked_days >= LEAST_DAYS_FOR_DISMISS_COMMISSION:
@@ -114,8 +120,6 @@ class Personnel():
             self.comment = u'非正常离职不计算提成'
 
     def get_comment_for_on_work(self):
-        # todo: better get comment from basic info other than commission
-        # todo: may fail due to requirement changed.
         if self.commission == BONUS_COMMISSION:
             if self.is_in_a_large_bundle:
                 reason = u'（入职批次满30人）'
@@ -125,8 +129,10 @@ class Personnel():
                 reason = u'（%s至%s期间入职）' % (period[0], period[1])
         elif self.commission == NORMAL_COMMISSION:
             reason = u'（入职批次不满30人）'
-        else:
+        elif not self.commission:
             return u'入职当月不满%s天' % LEAST_DAYS_FOR_NOR_COMMISSION
+        else:
+            raise Exception("%s worker get a commission of %s, check the calculation.")
         comment = u'这是第%s个月支付，按%s元/人支付，共支付一年%s' \
                   % (self.paid_month, self.commission, reason)
         return comment
