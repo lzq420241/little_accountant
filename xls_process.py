@@ -117,7 +117,6 @@ cols = sheet.ncols
 rows = sheet.nrows - 1
 
 
-
 # this func get all worker_ids that are in a bundle
 # from clearing xls of previous month
 # (more than 30 were hire during a month)
