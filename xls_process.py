@@ -105,10 +105,9 @@ valid_worker_ids = set()
 # worker_ids in bundle
 worker_ids_in_bundle = set()
 
-
 cur_dir = os.path.dirname(__file__)
 wb = open_workbook(os.path.join(cur_dir, xls_to_be_processed))
-#print wb.encoding
+# print wb.encoding
 #print wb.codepage
 out_wb = Workbook(encoding='utf-16le')
 
@@ -116,7 +115,7 @@ sheet = wb.sheet_by_index(0)
 cols = sheet.ncols
 # do not calc last stat line
 rows = sheet.nrows - 1
-max_width_of_comment = 0
+
 
 
 # this func get all worker_ids that are in a bundle
@@ -275,6 +274,7 @@ def draw_start_rows():
     # print tab_title
     out_sheet.write_merge(0, 0, 0, col_len - 1, tab_title, center_big_font)
     out_sheet.row(1).write(col_len - 1, desc, style=center_no_border)
+    out_sheet.col(col_len - 1).width = 10 * 12 / 7 * 256
     out_sheet.flush_row_data()
 
 
@@ -322,7 +322,7 @@ def draw_inserted_column_dict():
     global max_width_of_comment
     inserted_cols = get_inserted_column_dict()
     if title == u'±¸×¢':
-        width = len(inserted_cols[title]) * 11 / 7
+        width = len(inserted_cols[title]) * 12 / 7
         if width > max_width_of_comment:
             max_width_of_comment = width
         out_sheet.col(out_column_id).width = max_width_of_comment * 256
@@ -340,6 +340,7 @@ locale.setlocale(locale.LC_ALL, "")
 cate_list.sort(cmp=locale.strcoll)
 
 for category in cate_list:
+    max_width_of_comment = 0
     source = sheet_name_from_value[category][0]
     third_party = sheet_name_from_value[category][1]
     sheet_name = u"%s-%s%s" % (source, current_company, third_party)
