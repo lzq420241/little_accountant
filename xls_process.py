@@ -130,8 +130,8 @@ def get_pre_bundle_worker_ids():
             continue
         comment = cur_sheet.cell(row_idx, col_len - 1).value
         while comment:
-            # search for 'ÈëÖ°Âú'
-            if re.match(ur'.+[\u5165][\u804c][\u6ee1].+', comment, re.UNICODE):
+            # search for '[^²»]Âú30'
+            if re.match(ur'.+[^\u4e0d][\u6ee1]30.+', comment, re.UNICODE):
                 worker_id = cur_sheet.cell(row_idx, worker_id_col_idx).value
                 worker_ids_in_bundle.add(worker_id)
             row_idx += 1

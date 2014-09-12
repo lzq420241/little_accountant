@@ -122,7 +122,8 @@ class TestPersonnel(unittest.TestCase):
 
     def test_normal_worker_less_than_a_month(self):
         self.test_class = Personnel('8/25/14', '', '')
-        self.assertEqual(self.test_class.commission, BONUS_COMMISSION)
+        expect_value = round(BONUS_COMMISSION * 7.0 / 31, 2)
+        self.assertEqual(self.test_class.commission, expect_value)
 
     def test_normal_worker_less_than_seven_day(self):
         self.test_class = Personnel('8/26/14', '', '')

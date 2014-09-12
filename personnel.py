@@ -56,6 +56,8 @@ class Personnel():
             self.dismission_date = get_last_day_of_last_month()
         if self.dismission_date:
             self.dismission_month_id = get_month_id(self.dismission_date)
+
+        self.worked_days = self.__days_worked_last_month()
         # when counting worker numbers, we filter aboard date in hard employment duration.
         self.is_in_a_large_bundle = is_in_a_large_bundle
 
@@ -77,7 +79,7 @@ class Personnel():
         if self.status != u'在职' and self.status != u'自动离职':
             self.get_commission_for_dismission()
         elif self.status == u'在职' and self.__days_worked_last_month() >= LEAST_DAYS_FOR_NOR_COMMISSION:
-            self.commission = self.base_commission
+            self.__get_commission_from_worked_days()
 
     def get_base_commission(self):
         if is_in_span(self.aboard_date)[0]:
@@ -88,12 +90,14 @@ class Personnel():
             self.base_commission = NORMAL_COMMISSION
 
     def get_commission_for_dismission(self):
-        worked_days = self.__days_worked_last_month()
-        if self.dismission_month_id == self.aboard_month_id and worked_days >= LEAST_DAYS_FOR_NOR_COMMISSION:
+        if self.dismission_month_id == self.aboard_month_id and self.worked_days >= LEAST_DAYS_FOR_NOR_COMMISSION:
             self.commission = SPECIAL_COMMISSION
-        elif self.dismission_month_id != self.aboard_month_id and worked_days >= LEAST_DAYS_FOR_DISMISS_COMMISSION:
-            commission = self.base_commission * 1.0 * worked_days / get_days_of_last_month()
-            self.commission = round(commission, 2)
+        elif self.dismission_month_id != self.aboard_month_id and self.worked_days >= LEAST_DAYS_FOR_DISMISS_COMMISSION:
+            self.__get_commission_from_worked_days()
+
+    def __get_commission_from_worked_days(self):
+        commission = self.base_commission * 1.0 * self.worked_days / get_days_of_last_month()
+        self.commission = round(commission, 2)
 
     def get_start_work_day(self):
         tmp_day = get_first_day_of_last_month()
@@ -120,19 +124,19 @@ class Personnel():
             self.comment = u'非正常离职不计算提成'
 
     def get_comment_for_on_work(self):
-        if self.commission == BONUS_COMMISSION:
+        if self.base_commission == BONUS_COMMISSION:
             if self.is_in_a_large_bundle:
                 reason = u'（入职批次满30人）'
             else:
                 flag, period = is_in_span(self.aboard_date)
                 assert flag
                 reason = u'（%s至%s期间入职）' % (period[0], period[1])
-        elif self.commission == NORMAL_COMMISSION:
+        elif self.base_commission == NORMAL_COMMISSION:
             reason = u'（入职批次不满30人）'
         elif not self.commission:
             return u'入职当月不满%s天' % LEAST_DAYS_FOR_NOR_COMMISSION
         else:
-            raise Exception("%s worker get a commission of %s, check the calculation.")
+            raise Exception("%s worker get a commission of %s, check the calculation." % (self.status, self.commission))
         comment = u'这是第%s个月支付，按%s元/人支付，共支付一年%s' \
                   % (self.paid_month, self.commission, reason)
         return comment
