@@ -73,6 +73,8 @@ def get_last_month_id():
 
 # if para is False, return None
 def get_date(para):
+    if type(para) == unicode:
+        para = para.encode()
     if not para or type(para) == datetime.date:
         return para
     if type(para) == str:

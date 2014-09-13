@@ -126,7 +126,7 @@ input_end_row = sheet.nrows - 1
 def get_pre_bundle_worker_ids():
     global worker_ids_in_bundle
     ref_wb = open_workbook(os.path.join(cur_dir, reference_xls))
-    for sheet_index in range(ref_wb.nsheets):
+    for sheet_index in range(ref_wb.nsheets - 1):
         cur_sheet = ref_wb.sheet_by_index(sheet_index)
         if cur_sheet.ncols < col_len:
             continue
@@ -374,7 +374,7 @@ for category in cate_list:
 
     out_row_offset = ref_content_start_row
 
-    out_row_id = 0
+    out_row_id = out_row_offset
     for raw_row_id, row in enumerate(sequence_from_value[category]):
         out_column_id = 0
 
