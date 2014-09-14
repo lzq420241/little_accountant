@@ -20,7 +20,7 @@ out_title_list = [u'ĞòºÅ', u'ĞÕÃû', u'¹¤ºÅ', u'¹¤×÷µ¥Î»', u'ÈëÖ°ÈÕÆÚ', u'ºÏÍ¬×´Ì
 date_title_list = [u'ÈëÖ°ÈÕÆÚ', u'ÀëÖ°ÈÕÆÚ']
 key_col_name = u'µÚÈı·½'
 xls_to_be_processed = u'ÁªÊ¤7ÔÂÍâ°ü·ÑÓÃºË¶Ô-³ĞÌì£¨8-14£©.xls'
-reference_xls = u'2014Äê7ÔÂÁªÊ¤£¨³ĞÌì£©µÚÈı·½Ìá³É8-21.xls'
+reference_xls = u'2014Äê6ÔÂÁªÊ¤£¨³ĞÌì£©µÚÈı·½Ìá³É.xls'
 calc_desc = u'2014.2.1¿ªÊ¼µ±ÔÂÈëÖ°Âú30ÈË£¬Ö§¸¶100Ôª/ÈË/ÔÂ£¬²»Âú30ÈË£¬Ö§¸¶80Ôª/ÈË/ÔÂ£¬¹²Ö§¸¶1Äê¡£Ô±¹¤ÈëÖ°µ±ÔÂÂú7ÌìÒÔÉÏ' \
             u'°ìÀíÕı³£ÀëÖ°ÊÖĞøµÄ£¬Ò»´ÎĞÔÖ§¸¶200Ôª/ÈË¡£Ô±¹¤·ÇÈëÖ°ÔÂÀëÖ°£¬Õı³£°ìÀíÀëÖ°ÊÖĞøÇÒÀëÖ°µ±ÔÂÂú16ÌìÒÔÉÏ£¨º¬16Ìì£©' \
             u'°´ÀëÖ°µ±ÔÂÊµ¼ÊÔÚÖ°ÌìÊı¼ÆËãÌá³É¡£\n' \
@@ -90,8 +90,6 @@ date_style.alignment = alignment
 date_style.borders = borders
 date_style.font = font
 
-# key:category value:sheet_name
-sheet_name_from_value = {}
 # key:category value:personnel list
 personnel_from_value = {}
 # key:category value:sequence list
@@ -100,6 +98,8 @@ sequence_from_value = {}
 sheet_statistics = {}
 # key:third party value:total commission
 commission_for_third_party = {}
+# sheet_names
+sheet_names = set()
 # worker_ids need to be retained
 valid_worker_ids = set()
 # worker_ids in bundle
@@ -112,9 +112,12 @@ wb = open_workbook(os.path.join(cur_dir, xls_to_be_processed))
 out_wb = Workbook(encoding='utf-16le')
 
 sheet = wb.sheet_by_index(0)
+ref_content_start_row = 3
+ref_title_row = 2
 cols = sheet.ncols
 # do not calc last stat line
-rows = sheet.nrows - 1
+input_start_row = 1
+input_end_row = sheet.nrows - 1
 
 
 # this func get all worker_ids that are in a bundle
@@ -127,12 +130,18 @@ def get_pre_bundle_worker_ids():
         cur_sheet = ref_wb.sheet_by_index(sheet_index)
         if cur_sheet.ncols < col_len:
             continue
+        cur_title = list()
+        for col_idx in range(cur_sheet.ncols):
+            cur_title.append(cur_sheet.cell(ref_title_row, col_idx).value)
+        worker_id_col = cur_title.index(u'¹¤ºÅ')
+        aboard_col = cur_title.index(u'ÈëÖ°ÈÕÆÚ')
+
         aboard_2_months = set()
-        row_idx = 3
+        row_idx = ref_content_start_row
         comment = cur_sheet.cell(row_idx, col_len - 1).value
         while comment:
-            worker_id = cur_sheet.cell(row_idx, worker_id_col_idx).value
-            aboard_date = cur_sheet.cell(row_idx, aboard_col_idx).value
+            worker_id = cur_sheet.cell(row_idx, worker_id_col).value
+            aboard_date = cur_sheet.cell(row_idx, aboard_col).value
             # search for '[^²»]Âú30'
             if re.match(ur'.+[^\u4e0d][\u6ee1]%s.+' % BUNDLE, comment, re.UNICODE):
                 worker_ids_in_bundle.add(worker_id)
@@ -141,14 +150,14 @@ def get_pre_bundle_worker_ids():
             row_idx += 1
             comment = cur_sheet.cell(row_idx, col_len - 1).value
         if len(aboard_2_months) >= BUNDLE:
-            worker_ids_in_bundle += aboard_2_months
+            worker_ids_in_bundle |= aboard_2_months
 
 
 # this func get all worker_ids that are valid
 # from upstream xls
 # (already paid for 12 month or for the dismission)
 def get_valid_worker_ids():
-    for row in range(1, rows):
+    for row in range(input_start_row, input_end_row):
         aboard_date = get_date(sheet.cell(row, aboard_col_idx).value)
         dismission_date = get_date(sheet.cell(row, dismission_col_idx).value)
         if is_record_valid(aboard_date, dismission_date):
@@ -160,10 +169,10 @@ def get_valid_worker_ids():
 # from upstream xls
 def add_worker_ids_for_new_comer():
     global worker_ids_in_bundle
-    for category in get_sheet_name_dict_from_column(key_col_name).keys():
+    for category in sheet_names:
         tmp_set = set()
-        for row in range(1, rows):
-            if sheet.cell(row, key_column_index).value == category:
+        for row in range(input_start_row, input_end_row):
+            if get_sheet_name_tuple(row) == category:
                 aboard_date = sheet.cell(row, aboard_col_idx).value
                 if is_date_in_last_month(aboard_date) and not is_in_span(aboard_date):
                     worker_id = sheet.cell(row, worker_id_col_idx).value
@@ -192,23 +201,11 @@ def get_column_ids_by_names(title_list):
     return ids
 
 
-def get_sheet_name_dict_from_column(title):
-    idx = get_column_idx_by_title(title)
-    #search for 'À´Ô´£¨µÚÈı·½£©'
-    valid_style = re.compile(ur'(\w+)\W*[\uff08\u0028]\W*(\w+)\W*[\uff09\u0029]', re.UNICODE)
-    for row in range(1, rows):
-        content = sheet.row_values(row, idx, idx + 1)[0]
-        if type(content) == unicode:
-            #print content
-            matched_content = valid_style.match(content)
-        else:
-            matched_content = None
-        if matched_content:
-            # sheet_name = "%s-%s%s" % (matched_content.group(1), current_company, matched_content.group(2))
-            sheet_name = (matched_content.group(1), matched_content.group(2))
-            sheet_name_from_value[content] = sheet_name
-    #print sheet_name_from_value and "OK" or "NULL"
-    return sheet_name_from_value
+def get_sheet_names_from_column():
+    for row in range(input_start_row, input_end_row):
+        tmp_tup = get_sheet_name_tuple(row)
+        if tmp_tup:
+            sheet_names.add(tmp_tup)
 
 
 date_title_idx = get_column_ids_by_names(date_title_list)
@@ -220,18 +217,37 @@ dismission_col_idx = get_column_idx_by_title(u'ÀëÖ°ÈÕÆÚ')
 status_col_idx = get_column_idx_by_title(u'ÀëÖ°·½Ê½')
 
 
+def get_src_grp_3rd_tuple(unicode_str):
+    # search for 'À´Ô´£¨µÚÈı·½£©'
+    valid_style = re.compile(ur'(\w+)\W*[\uff08\u0028]\W*(\w+)\W*[\uff09\u0029]', re.UNICODE)
+    if type(unicode_str) == unicode:
+        matched_content = valid_style.match(unicode_str)
+    else:
+        return None
+    if matched_content:
+        src_grp_3rd_tuple = (matched_content.group(1), matched_content.group(2))
+        return src_grp_3rd_tuple
+    return None
+
+
+def get_sheet_name_tuple(row_id):
+    cell_value = sheet.cell(row_id, key_column_index).value
+    return get_src_grp_3rd_tuple(cell_value)
+
+
 def personnel_initializer():
     global worker_ids_in_bundle
+    get_sheet_names_from_column()
     get_pre_bundle_worker_ids()
     add_worker_ids_for_new_comer()
     get_valid_worker_ids()
     # print worker_ids_in_bundle
     worker_ids_in_bundle &= valid_worker_ids
-    for category in get_sheet_name_dict_from_column(key_col_name).keys():
+    for category in sheet_names:
         personnel_list = list()
         sequence_list = list()
-        for row in range(1, rows):
-            if sheet.cell(row, key_column_index).value == category:
+        for row in range(1, input_end_row):
+            if get_sheet_name_tuple(row) == category:
 
                 sequence = sheet.cell(row, sequence_col_idx).value
                 worker_id = sheet.cell(row, worker_id_col_idx).value
@@ -338,27 +354,27 @@ personnel_initializer()
 
 import locale
 
-cate_list = get_sheet_name_dict_from_column(key_col_name).keys()
+cate_list = ['+'.join(sht) for sht in sheet_names]
 # this reads the environment and inits the right locale
 locale.setlocale(locale.LC_ALL, "")
-
 cate_list.sort(cmp=locale.strcoll)
+cate_list = [tuple(cat.split('+')) for cat in cate_list]
 
 for category in cate_list:
     max_width_of_comment = 0
-    source = sheet_name_from_value[category][0]
-    third_party = sheet_name_from_value[category][1]
+    source = category[0]
+    third_party = category[1]
     sheet_name = u"%s-%s%s" % (source, current_company, third_party)
     out_sheet = out_wb.add_sheet(sheet_name)
 
     draw_start_rows()
 
     for idx, title in enumerate(out_title_list):
-        out_sheet.row(2).write(idx, title, style=center_border)
+        out_sheet.row(ref_title_row).write(idx, title, style=center_border)
 
-    out_row_id = 2
-    out_row_offset = 3
+    out_row_offset = ref_content_start_row
 
+    out_row_id = 0
     for raw_row_id, row in enumerate(sequence_from_value[category]):
         out_column_id = 0
 
