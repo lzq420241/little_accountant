@@ -12,24 +12,24 @@ from xlrd import *
 from xlwt import *
 
 from personnel import *
-from calculator import get_first_day_of_last_month, is_date_in_last_month, is_in_span, get_date
+from calculator import *
 
 
-in_title_list = [u'åºå·', u'å§“å', u'å·¥å·', u'å…¥èŒæ—¥æœŸ', u'ç¦»èŒæ—¥æœŸ']
-out_title_list = [u'åºå·', u'å§“å', u'å·¥å·', u'å·¥ä½œå•ä½', u'å…¥èŒæ—¥æœŸ', u'åˆåŒçŠ¶æ€', u'ç¦»èŒæ—¥æœŸ', u'é‡‘é¢/å…ƒ', u'å¤‡æ³¨']
-date_title_list = [u'å…¥èŒæ—¥æœŸ', u'ç¦»èŒæ—¥æœŸ']
-key_col_name = u'ç¬¬ä¸‰æ–¹'
-xls_to_be_processed = u'è”èƒœ7æœˆå¤–åŒ…è´¹ç”¨æ ¸å¯¹-æ‰¿å¤©ï¼ˆ8-14ï¼‰.xls'
-reference_xls = u'2014å¹´6æœˆè”èƒœï¼ˆæ‰¿å¤©ï¼‰ç¬¬ä¸‰æ–¹ææˆ.xls'
-calc_desc = u'2014.2.1å¼€å§‹å½“æœˆå…¥èŒæ»¡30äººï¼Œæ”¯ä»˜100å…ƒ/äºº/æœˆï¼Œä¸æ»¡30äººï¼Œæ”¯ä»˜80å…ƒ/äºº/æœˆï¼Œå…±æ”¯ä»˜1å¹´ã€‚å‘˜å·¥å…¥èŒå½“æœˆæ»¡7å¤©ä»¥ä¸Š' \
-            u'åŠç†æ­£å¸¸ç¦»èŒæ‰‹ç»­çš„ï¼Œä¸€æ¬¡æ€§æ”¯ä»˜200å…ƒ/äººã€‚å‘˜å·¥éå…¥èŒæœˆç¦»èŒï¼Œæ­£å¸¸åŠç†ç¦»èŒæ‰‹ç»­ä¸”ç¦»èŒå½“æœˆæ»¡16å¤©ä»¥ä¸Šï¼ˆå«16å¤©ï¼‰' \
-            u'æŒ‰ç¦»èŒå½“æœˆå®é™…åœ¨èŒå¤©æ•°è®¡ç®—ææˆã€‚\n' \
-            u'2014.03.20è‡³2014.03.31æœŸé—´ç”±ç¬¬ä¸‰æ–¹è¾“é€è”èƒœçš„äººå‘˜æ”¯ä»˜æ–¹å¼è°ƒæ•´å¦‚ä¸‹ï¼š' \
-            u'å–æ¶ˆç¬¬ä¸‰æ–¹è¾“é€äººæ•°é™åˆ¶ï¼Œæ¯è¾“é€ä¸€äººæ”¯ä»˜100å…ƒ/äºº/æœˆï¼Œæ”¯ä»˜æ—¶é—´ä¸ºä¸€å¹´ã€‚\n' \
-            u'ä»2014å¹´7æœˆ1æ—¥èµ·è‡³2014å¹´12æœˆ31æ—¥ï¼Œä¸ç®¡å…¥èŒå‘˜å·¥äººæ•°æ•°é‡çš„å¤šå°‘ï¼ŒæŒ‰100å…ƒ/äºº/æœˆçš„è®¡ç®—æ–¹å¼è®¡ç®—è´¹ç”¨ã€‚'
-corp_sign = u'ä¸œèå¸‚æ‰¿å¤©äººåŠ›èµ„æºç®¡ç†å’¨è¯¢æœ‰é™å…¬å¸'
-current_company = u'è”èƒœ'
-summary_sheet_name = u'ææˆæ±‡æ€»'
+in_title_list = [u'ĞòºÅ', u'ĞÕÃû', u'¹¤ºÅ', u'ÈëÖ°ÈÕÆÚ', u'ÀëÖ°ÈÕÆÚ']
+out_title_list = [u'ĞòºÅ', u'ĞÕÃû', u'¹¤ºÅ', u'¹¤×÷µ¥Î»', u'ÈëÖ°ÈÕÆÚ', u'ºÏÍ¬×´Ì¬', u'ÀëÖ°ÈÕÆÚ', u'½ğ¶î/Ôª', u'±¸×¢']
+date_title_list = [u'ÈëÖ°ÈÕÆÚ', u'ÀëÖ°ÈÕÆÚ']
+key_col_name = u'µÚÈı·½'
+xls_to_be_processed = u'ÁªÊ¤7ÔÂÍâ°ü·ÑÓÃºË¶Ô-³ĞÌì£¨8-14£©.xls'
+reference_xls = u'2014Äê7ÔÂÁªÊ¤£¨³ĞÌì£©µÚÈı·½Ìá³É8-21.xls'
+calc_desc = u'2014.2.1¿ªÊ¼µ±ÔÂÈëÖ°Âú30ÈË£¬Ö§¸¶100Ôª/ÈË/ÔÂ£¬²»Âú30ÈË£¬Ö§¸¶80Ôª/ÈË/ÔÂ£¬¹²Ö§¸¶1Äê¡£Ô±¹¤ÈëÖ°µ±ÔÂÂú7ÌìÒÔÉÏ' \
+            u'°ìÀíÕı³£ÀëÖ°ÊÖĞøµÄ£¬Ò»´ÎĞÔÖ§¸¶200Ôª/ÈË¡£Ô±¹¤·ÇÈëÖ°ÔÂÀëÖ°£¬Õı³£°ìÀíÀëÖ°ÊÖĞøÇÒÀëÖ°µ±ÔÂÂú16ÌìÒÔÉÏ£¨º¬16Ìì£©' \
+            u'°´ÀëÖ°µ±ÔÂÊµ¼ÊÔÚÖ°ÌìÊı¼ÆËãÌá³É¡£\n' \
+            u'2014.03.20ÖÁ2014.03.31ÆÚ¼äÓÉµÚÈı·½ÊäËÍÁªÊ¤µÄÈËÔ±Ö§¸¶·½Ê½µ÷ÕûÈçÏÂ£º' \
+            u'È¡ÏûµÚÈı·½ÊäËÍÈËÊıÏŞÖÆ£¬Ã¿ÊäËÍÒ»ÈËÖ§¸¶100Ôª/ÈË/ÔÂ£¬Ö§¸¶Ê±¼äÎªÒ»Äê¡£\n' \
+            u'´Ó2014Äê7ÔÂ1ÈÕÆğÖÁ2014Äê12ÔÂ31ÈÕ£¬²»¹ÜÈëÖ°Ô±¹¤ÈËÊıÊıÁ¿µÄ¶àÉÙ£¬°´100Ôª/ÈË/ÔÂµÄ¼ÆËã·½Ê½¼ÆËã·ÑÓÃ¡£'
+corp_sign = u'¶«İ¸ÊĞ³ĞÌìÈËÁ¦×ÊÔ´¹ÜÀí×ÉÑ¯ÓĞÏŞ¹«Ë¾'
+current_company = u'ÁªÊ¤'
+summary_sheet_name = u'Ìá³É»ã×Ü'
 col_len = len(out_title_list)
 BUNDLE = 30
 
@@ -125,17 +125,23 @@ def get_pre_bundle_worker_ids():
     ref_wb = open_workbook(os.path.join(cur_dir, reference_xls))
     for sheet_index in range(ref_wb.nsheets):
         cur_sheet = ref_wb.sheet_by_index(sheet_index)
-        row_idx = 3
         if cur_sheet.ncols < col_len:
             continue
+        aboard_2_months = set()
+        row_idx = 3
         comment = cur_sheet.cell(row_idx, col_len - 1).value
         while comment:
-            # search for '[^ä¸]æ»¡30'
+            worker_id = cur_sheet.cell(row_idx, worker_id_col_idx).value
+            aboard_date = cur_sheet.cell(row_idx, aboard_col_idx).value
+            # search for '[^²»]Âú30'
             if re.match(ur'.+[^\u4e0d][\u6ee1]%s.+' % BUNDLE, comment, re.UNICODE):
-                worker_id = cur_sheet.cell(row_idx, worker_id_col_idx).value
                 worker_ids_in_bundle.add(worker_id)
+            if get_month_id(aboard_date) == get_last_month_id() - 1:
+                aboard_2_months.add(worker_id)
             row_idx += 1
             comment = cur_sheet.cell(row_idx, col_len - 1).value
+        if len(aboard_2_months) >= BUNDLE:
+            worker_ids_in_bundle += aboard_2_months
 
 
 # this func get all worker_ids that are valid
@@ -188,8 +194,8 @@ def get_column_ids_by_names(title_list):
 
 def get_sheet_name_dict_from_column(title):
     idx = get_column_idx_by_title(title)
-    #search for 'æ¥æºï¼ˆç¬¬ä¸‰æ–¹ï¼‰'
-    valid_style = re.compile(ur'(\w+)\W*[\uff08]\W*(\w+)\W*[\uff09]', re.UNICODE)
+    #search for 'À´Ô´£¨µÚÈı·½£©'
+    valid_style = re.compile(ur'(\w+)\W*[\uff08\u0028]\W*(\w+)\W*[\uff09\u0029]', re.UNICODE)
     for row in range(1, rows):
         content = sheet.row_values(row, idx, idx + 1)[0]
         if type(content) == unicode:
@@ -207,11 +213,11 @@ def get_sheet_name_dict_from_column(title):
 
 date_title_idx = get_column_ids_by_names(date_title_list)
 key_column_index = get_column_idx_by_title(key_col_name)
-sequence_col_idx = get_column_idx_by_title(u'åºå·')
-worker_id_col_idx = get_column_idx_by_title(u'å·¥å·')
-aboard_col_idx = get_column_idx_by_title(u'å…¥èŒæ—¥æœŸ')
-dismission_col_idx = get_column_idx_by_title(u'ç¦»èŒæ—¥æœŸ')
-status_col_idx = get_column_idx_by_title(u'ç¦»èŒæ–¹å¼')
+sequence_col_idx = get_column_idx_by_title(u'ĞòºÅ')
+worker_id_col_idx = get_column_idx_by_title(u'¹¤ºÅ')
+aboard_col_idx = get_column_idx_by_title(u'ÈëÖ°ÈÕÆÚ')
+dismission_col_idx = get_column_idx_by_title(u'ÀëÖ°ÈÕÆÚ')
+status_col_idx = get_column_idx_by_title(u'ÀëÖ°·½Ê½')
 
 
 def personnel_initializer():
@@ -254,7 +260,7 @@ def personnel_initializer():
 def get_sheet_statistics(persons):
     assert type(persons) == list or type(persons) == tuple
     aboard_number = len(filter((lambda p: is_date_in_last_month(p.aboard_date)), persons))
-    dismiss_number = len(filter((lambda p: p.status != u'åœ¨èŒ'), persons))
+    dismiss_number = len(filter((lambda p: p.status != u'ÔÚÖ°'), persons))
     calc_stat = list()
     com_list = [p.commission for p in persons]
     com_set = set(com_list)
@@ -262,14 +268,14 @@ def get_sheet_statistics(persons):
         com_set.remove(0.00)
     for c in com_set:
         cnt = com_list.count(c)
-        calc_stat.append(u"%säºº*%så…ƒ/äºº" % (cnt, c))
+        calc_stat.append(u"%sÈË*%sÔª/ÈË" % (cnt, c))
     return [aboard_number, dismiss_number, '+'.join(calc_stat)]
 
 
 def draw_start_rows():
-    tab_title = u'%sææˆï¼ˆ%sï¼‰' % (current_company, third_party)
+    tab_title = u'%sÌá³É£¨%s£©' % (current_company, third_party)
     time_info = get_first_day_of_last_month()
-    desc = u'æ‰€å±æ—¶é—´ï¼š%så¹´%sæœˆ' % (time_info.year, time_info.month)
+    desc = u'ËùÊôÊ±¼ä£º%sÄê%sÔÂ' % (time_info.year, time_info.month)
     # print tab_title
     out_sheet.write_merge(0, 0, 0, col_len - 1, tab_title, center_big_font)
     out_sheet.row(1).write(col_len - 1, desc, style=center_no_border)
@@ -279,9 +285,9 @@ def draw_start_rows():
 
 def draw_ending_rows():
     aboard_num, dismiss_num, calc_info = sheet_statistics[category]
-    out_sheet.write_merge(out_row_id + 2, out_row_id + 2, 0, col_len - 1, u'æœ¬æœˆæ–°å…¥èŒï¼š%säºº' % aboard_num, left_align)
-    out_sheet.write_merge(out_row_id + 3, out_row_id + 3, 0, col_len - 1, u'æœ¬æœˆç¦»èŒï¼š%säºº' % dismiss_num, left_align)
-    out_sheet.write_merge(out_row_id + 4, out_row_id + 4, 0, col_len - 1, u'å®é™…ç»“ç®—:%s=%så…ƒ'
+    out_sheet.write_merge(out_row_id + 2, out_row_id + 2, 0, col_len - 1, u'±¾ÔÂĞÂÈëÖ°£º%sÈË' % aboard_num, left_align)
+    out_sheet.write_merge(out_row_id + 3, out_row_id + 3, 0, col_len - 1, u'±¾ÔÂÀëÖ°£º%sÈË' % dismiss_num, left_align)
+    out_sheet.write_merge(out_row_id + 4, out_row_id + 4, 0, col_len - 1, u'Êµ¼Ê½áËã:%s=%sÔª'
                           % (calc_info, commission_sum), left_align)
     out_sheet.flush_row_data()
 
@@ -295,7 +301,7 @@ def draw_signature():
     out_sheet.row(out_row_id + 5).height_mismatch = True
     out_sheet.row(out_row_id + 5).height = 256 * 4
     out_sheet.write_merge(out_row_id + 6, out_row_id + 6, 5, col_len - 1, corp_sign, center_no_border)
-    out_sheet.write_merge(out_row_id + 7, out_row_id + 7, 5, col_len - 1, u'%så¹´%sæœˆ%sæ—¥'
+    out_sheet.write_merge(out_row_id + 7, out_row_id + 7, 5, col_len - 1, u'%sÄê%sÔÂ%sÈÕ'
                           % (now.year, now.month, now.day), center_no_border)
 
     out_sheet.flush_row_data()
@@ -303,24 +309,24 @@ def draw_signature():
 
 def draw_last_row(row_id, paid_sum):
     for col_idx in range(0, col_len):
-        if out_title_list[col_idx] == u'å§“å':
-            out_sheet.row(row_id).write(col_idx, u'åˆè®¡', style=center_border)
-        elif out_title_list[col_idx] == u'é‡‘é¢/å…ƒ':
+        if out_title_list[col_idx] == u'ĞÕÃû':
+            out_sheet.row(row_id).write(col_idx, u'ºÏ¼Æ', style=center_border)
+        elif out_title_list[col_idx] == u'½ğ¶î/Ôª':
             out_sheet.row(row_id).write(col_idx, paid_sum, style=center_border_num)
         else:
             out_sheet.row(row_id).write(col_idx, '', style=center_border)
 
 
 def get_inserted_column_dict():
-    inserted_column_dict = {u'å·¥ä½œå•ä½': current_company, u'åˆåŒçŠ¶æ€': person.status,
-                            u'é‡‘é¢/å…ƒ': person.commission, u'å¤‡æ³¨': person.comment}
+    inserted_column_dict = {u'¹¤×÷µ¥Î»': current_company, u'ºÏÍ¬×´Ì¬': person.status,
+                            u'½ğ¶î/Ôª': person.commission, u'±¸×¢': person.comment}
     return inserted_column_dict
 
 
 def draw_inserted_column_dict():
     global max_width_of_comment
     inserted_cols = get_inserted_column_dict()
-    if title == u'å¤‡æ³¨':
+    if title == u'±¸×¢':
         width = len(inserted_cols[title]) * 12 / 7
         if width > max_width_of_comment:
             max_width_of_comment = width
@@ -367,7 +373,7 @@ for category in cate_list:
                     # good estimate 12*256 as the unit is 1/256 width of the char '0'
                     out_sheet.col(out_column_id).width = 12 * 256
                     out_sheet.row(out_row_id).write(out_column_id, sheet.cell(row, col).value, style=date_style)
-                elif col == get_column_idx_by_title(u'åºå·'):
+                elif col == get_column_idx_by_title(u'ĞòºÅ'):
                     out_sheet.row(out_row_id).write(out_column_id, raw_row_id + 1, style=center_border)
                 else:
                     out_sheet.row(out_row_id).write(out_column_id, sheet.cell(row, col).value, style=center_border)
